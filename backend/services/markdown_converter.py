@@ -98,14 +98,14 @@ def _markitdown_convert(content: bytes, extension: str) -> str:
 # ─────────────────────────────────────────────────────────────────────────────
 
 def _pdf_page_count(content: bytes) -> int:
-    from PyPDF2 import PdfReader
+    from pypdf import PdfReader
 
     return len(PdfReader(io.BytesIO(content)).pages)
 
 
 def _split_pdf_pages(content: bytes) -> list[bytes]:
     """Découpe un PDF en PDF d'une page, pour garder le numéro de page de chaque extrait."""
-    from PyPDF2 import PdfReader, PdfWriter
+    from pypdf import PdfReader, PdfWriter
 
     reader = PdfReader(io.BytesIO(content))
     if len(reader.pages) > MAX_PDF_PAGES:
@@ -126,7 +126,7 @@ PASSWORD_WARNING = "PDF protégé par un mot de passe : retirez la protection, p
 def _pdf_password_required(content: bytes) -> bool:
     """Vrai si le PDF ne s'ouvre qu'avec un mot de passe. Un PDF seulement protégé contre la
     modification ou l'impression (mot de passe d'ouverture vide) se lit normalement."""
-    from PyPDF2 import PdfReader
+    from pypdf import PdfReader
 
     try:
         reader = PdfReader(io.BytesIO(content))
@@ -196,7 +196,7 @@ def _page_texts_fast(path: Path, page_count: int) -> list[str]:
         except (subprocess.SubprocessError, OSError) as e:
             print(f"[WARN] pdftotext a échoué, repli sur PyPDF2 : {e}")
 
-    from PyPDF2 import PdfReader
+    from pypdf import PdfReader
 
     texts = []
     for page in PdfReader(str(path)).pages:

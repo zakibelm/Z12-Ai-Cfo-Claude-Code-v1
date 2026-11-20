@@ -141,6 +141,26 @@ async def auth_config():
         "client_id": GOOGLE_CLIENT_ID or None,
     }
 
+
+def _google_signup_allowed(google_sub: str, email: str) -> bool:
+    """Autorise la connexion d'un compte Google existant, ou la création d'un nouveau compte
+    seulement si les inscriptions sont ouvertes ou si le courriel est explicitement autorisé."""
+    try:
+        with _conn() as c, c.cursor() as cur:
+            cur.execute("SELECT 1 FROM users WHERE google_sub = %s LIMIT 1", (google_sub,))
+            if cur.fetchone():
+                return True
+    except Exception as e:  # noqa: BLE001 — fail closed
+        print(f"[WARN] Google signup check failed: {type(e).__name__}")
+        return False
+    import invitations
+
+    if invitations.registration_mode() == "open":
+        return True
+    allowed = {x.strip().lower() for x in os.getenv("GOOGLE_ALLOWED_EMAILS", "").split(",") if x.strip()}
+    return (email or "").strip().lower() in allowed
+
+
 @router.get("/google/login")
 async def google_login(request: Request, redirect_to: Optional[str] = None):
     if not (GOOGLE_CLIENT_ID and GOOGLE_REDIRECT_URI):
@@ -247,6 +267,12 @@ async def google_callback(request: Request, code: Optional[str] = None, state: O
     locale = user_info.get("locale")
     if not google_sub or not email:
         return RedirectResponse(f"{FRONTEND_URL}/login?error=userinfo_failed")
+
+    # Audit 2026-11 : la connexion Google ne doit pas contourner l'inscription sur invitation.
+    # Un compte existant se reconnecte ; un nouveau compte exige le mode "open" ou un courriel
+    # autorisé (GOOGLE_ALLOWED_EMAILS, séparés par des virgules).
+    if not _google_signup_allowed(google_sub, email):
+        return RedirectResponse(f"{FRONTEND_URL}/login?error=registration_closed")
 
     expires_at_token = _now() + dt.timedelta(seconds=expires_in)
     access_enc = _enc(access_token)

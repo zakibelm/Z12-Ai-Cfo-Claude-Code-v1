@@ -83,13 +83,25 @@ jobs:
         with:
           name: dist
           path: dist/
-      # Définir les secrets SSH_HOST et SSH_USER (utilisateur de déploiement non-root) :
-      # les valeurs de repli ci-dessous ne servent qu'à ne pas casser le déploiement actuel.
+      # Audit 2026-11 : plus de repli sur root ni sur une IP en dur. Définir les secrets
+      # SSH_HOST, SSH_USER (utilisateur de déploiement non-root) et SSH_PRIVATE_KEY.
+      - name: Vérifier les secrets de déploiement
+        env:
+          SSH_HOST: ${{ secrets.SSH_HOST }}
+          SSH_USER: ${{ secrets.SSH_USER }}
+          SSH_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
+        run: |
+          if [ -z "$SSH_HOST" ] || [ -z "$SSH_USER" ] || [ -z "$SSH_KEY" ]; then
+            echo "Secrets SSH_HOST, SSH_USER et SSH_PRIVATE_KEY requis pour déployer"; exit 1
+          fi
+          if [ "$SSH_USER" = "root" ]; then
+            echo "SSH_USER ne doit pas être root"; exit 1
+          fi
       - name: Deploy frontend to VPS
         uses: appleboy/scp-action@v0.1.7
         with:
-          host: ${{ secrets.SSH_HOST || '147.93.40.124' }}
-          username: ${{ secrets.SSH_USER || 'root' }}
+          host: ${{ secrets.SSH_HOST }}
+          username: ${{ secrets.SSH_USER }}
           key: ${{ secrets.SSH_PRIVATE_KEY }}
           source: "dist/"
           target: "/var/www/z12-cfo/"

@@ -1,5 +1,5 @@
 from __future__ import annotations
-import os, secrets, datetime as dt
+import os, secrets, hashlib, datetime as dt
 from typing import Optional
 import jwt, psycopg, bcrypt
 from psycopg.rows import dict_row
@@ -31,6 +31,13 @@ def _sign_jwt(user_id, jti, expires_at):
          "iat": int(_now().timestamp()), "exp": int(expires_at.timestamp()),
          "aud": "phoenix", "iss": "phoenix-auth"},
         require_session_secret(), algorithm="HS256")
+
+def _token_fingerprint(token: str) -> str:
+    """Empreinte SHA-256 du jeton : la base ne garde jamais le JWT lui-même."""
+    return hashlib.sha256(token.encode()).hexdigest()
+
+# Hash factice : égalise le temps de réponse quand le compte n'existe pas (anti-énumération).
+_DUMMY_HASH = bcrypt.hashpw(b"dummy-password-for-timing", bcrypt.gensalt()).decode()
 
 def _set_cookie(resp, token):
     resp.set_cookie(key=COOKIE_NAME, value=token, max_age=SESSION_TTL_HOURS*3600,
@@ -159,7 +166,7 @@ async def register(body: RegisterBody, request: Request):
     with _conn() as c, c.cursor() as cur:
         cur.execute(
             "INSERT INTO user_sessions (user_id, jti, expires_at, token) VALUES (%s, %s, %s, %s)",
-            (str(user_id), jti, exp, token))
+            (str(user_id), jti, exp, _token_fingerprint(token)))
         c.commit()
     resp = JSONResponse({"ok": True, "email": email})
     _set_cookie(resp, token)
@@ -176,6 +183,7 @@ async def login(body: LoginBody, request: Request):
             (email,))
         user = cur.fetchone()
     if not user or not user["is_active"]:
+        bcrypt.checkpw(body.password.encode()[:72], _DUMMY_HASH.encode())
         raise HTTPException(401, "Email ou mot de passe incorrect")
     if not bcrypt.checkpw(body.password.encode(), user["password_hash"].encode()):
         raise HTTPException(401, "Email ou mot de passe incorrect")
@@ -185,7 +193,7 @@ async def login(body: LoginBody, request: Request):
     with _conn() as c, c.cursor() as cur:
         cur.execute(
             "INSERT INTO user_sessions (user_id, jti, expires_at, token) VALUES (%s, %s, %s, %s)",
-            (str(user["id"]), jti, exp, token))
+            (str(user["id"]), jti, exp, _token_fingerprint(token)))
         c.commit()
     resp = JSONResponse({"ok": True, "user": {
         "id": str(user["id"]), "email": user["email"],
@@ -253,7 +261,8 @@ async def forgot_password(body: ForgotBody, request: Request):
     return response
 
 @router.post("/reset-password")
-async def reset_password(body: ResetBody):
+async def reset_password(body: ResetBody, request: Request):
+    auth_limiter.check(_client_key(request))
     _check_password(body.password)
     with _conn() as c, c.cursor() as cur:
         cur.execute(

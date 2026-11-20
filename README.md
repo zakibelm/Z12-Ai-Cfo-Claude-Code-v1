@@ -99,7 +99,7 @@
 > ├── PostgreSQL + pgvector (stockage local sur VPS)
 > └── search_chunks() cosine similarity, seuil 0.6
 > ↓
-> Backend FastAPI (VPS Hostinger 147.93.40.124)
+> Backend FastAPI (VPS Hostinger)
 > ├── Document processing (PyPDF2, python-docx)
 > ├── Chunking 500 tokens
 > └── PostgreSQL local (Loi 25 — données 100% sur VPS canadien)

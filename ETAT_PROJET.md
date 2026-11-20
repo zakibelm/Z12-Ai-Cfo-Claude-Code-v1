@@ -21,7 +21,7 @@ Score : 8.8/10 · C1-C17 ✅ · Landing ✅ CI #105 · tiret-insécable/FAQ/C-27
 ## ÉTAT PRODUCTION — 30 MAI 2026
 
 ### Infrastructure
-- VPS : root@147.93.40.124 (Hostinger Ubuntu 24.04)
+- VPS : utilisateur de déploiement non-root@<IP-VPS> (Hostinger Ubuntu 24.04)
 - URL : https://cfo.optigenius.pro ✅ OPÉRATIONNEL
 - CI/CD : GitHub Actions — 121 runs · CI #90 ✅ 21s (dernier)
 - Docker : ai-cfo-phoenix-v3-backend-1 sur port 8000

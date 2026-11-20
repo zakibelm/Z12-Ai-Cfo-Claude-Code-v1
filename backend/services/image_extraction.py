@@ -80,7 +80,7 @@ def _ocr(image) -> tuple[str, str]:
 
 
 def _page_count(path: Path) -> int:
-    from PyPDF2 import PdfReader
+    from pypdf import PdfReader
 
     try:
         return len(PdfReader(str(path)).pages)
@@ -136,7 +136,7 @@ def _candidate_images(content: bytes):
                 shutil.rmtree(out, ignore_errors=True)
         return
 
-    from PyPDF2 import PdfReader
+    from pypdf import PdfReader
 
     for page_number, page in enumerate(PdfReader(io.BytesIO(content)).pages, start=1):
         try:

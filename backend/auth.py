@@ -250,6 +250,13 @@ async def get_current_user_id(
     if authorization and authorization.lower().startswith("bearer "):
         token = authorization.split(None, 1)[1].strip()
         payload = _decode_bearer(token)
+        # Audit 2026-11 : un JWT émis par notre propre service d'auth (iss=phoenix-auth) doit
+        # correspondre à une session active, comme le cookie : logout et changement de mot de
+        # passe le révoquent ainsi aussi lorsqu'il est présenté en Bearer.
+        if payload and payload.get("iss") == "phoenix-auth":
+            jti = payload.get("jti")
+            if not jti or not session_is_active(str(jti)):
+                payload = None
         if payload:
             uid = str(payload.get("sub") or payload.get("user_id") or "")
             if uid and _is_valid_user_id(uid):

@@ -22,7 +22,7 @@ except ImportError:
     PptxPresentation = None
 
 try:
-    from PyPDF2 import PdfReader
+    from pypdf import PdfReader
 except ImportError:
     PdfReader = None
 
@@ -123,7 +123,7 @@ def extract_text_from_file(file_content: bytes, filename: str) -> str:
 
 def _extract_pdf(content: bytes, filename: str) -> str:
     if not PdfReader:
-        return "[ERREUR] PyPDF2 non installé. Installez avec: pip install pypdf2"
+        return "[ERREUR] pypdf non installé. Installez avec: pip install pypdf"
 
     reader = PdfReader(io.BytesIO(content))
     if len(reader.pages) > MAX_PDF_PAGES:

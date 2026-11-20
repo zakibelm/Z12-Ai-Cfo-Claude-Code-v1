@@ -30,9 +30,9 @@ services:
       AUTH_MODE: ${AUTH_MODE:-strict}
       SESSION_JWT_SECRET: ${JWT_SECRET}
       INTERNAL_SERVICE_SECRET: ${INTERNAL_SERVICE_SECRET:-}
-      FRONTEND_URL: ${FRONTEND_URL:-http://localhost}
+      FRONTEND_URL: ${FRONTEND_URL:-${PUBLIC_URL:-http://localhost}}
       ALLOWED_ORIGINS: ${ALLOWED_ORIGINS:-https://cfo.optigenius.pro}
-      CHAT_ALLOWED_MODEL_PREFIXES: ${CHAT_ALLOWED_MODEL_PREFIXES:-}
+      CHAT_ALLOWED_MODEL_PREFIXES: ${CHAT_ALLOWED_MODEL_PREFIXES:-anthropic/,google/,deepseek/,qwen/,meta-llama/,mistralai/}
       TWILIO_ACCOUNT_SID: ${TWILIO_ACCOUNT_SID:-}
       TWILIO_AUTH_TOKEN: ${TWILIO_AUTH_TOKEN:-}
       TWILIO_WHATSAPP_FROM: ${TWILIO_FROM:-}
@@ -41,7 +41,21 @@ services:
       UPLOAD_DIR: /app/uploads
       ADMIN_EMAIL: ${ADMIN_EMAIL}
       ADMIN_PASSWORD: ${ADMIN_PASSWORD}
-      CABINET_NAME: ${CABINET_NAME}
+      CABINET_NAME: ${CABINET_NAME:-${COMPANY_NAME:-}}
+      # Administration, inscription et budgets (voir .env.example). Sans ADMIN_USER_IDS,
+      # aucun compte n'est administrateur et le RAG metier n'est pas servi.
+      ADMIN_USER_IDS: ${ADMIN_USER_IDS:-}
+      REGISTRATION_MODE: ${REGISTRATION_MODE:-invite}
+      GOOGLE_ALLOWED_EMAILS: ${GOOGLE_ALLOWED_EMAILS:-}
+      TRIAL_BUDGET_CAD: ${TRIAL_BUDGET_CAD:-3}
+      PLATFORM_MONTHLY_BUDGET_CAD: ${PLATFORM_MONTHLY_BUDGET_CAD:-150}
+      USD_TO_CAD: ${USD_TO_CAD:-1.40}
+      FALLBACK_MODEL: ${FALLBACK_MODEL:-}
+      SMTP_HOST: ${SMTP_HOST:-}
+      SMTP_PORT: ${SMTP_PORT:-587}
+      SMTP_USER: ${SMTP_USER:-}
+      SMTP_PASSWORD: ${SMTP_PASSWORD:-}
+      SMTP_FROM: ${SMTP_FROM:-}
     volumes:
       # Documents client : persistants entre deux déploiements
       - uploads_data:/app/uploads

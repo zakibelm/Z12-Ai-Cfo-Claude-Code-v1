@@ -1,7 +1,6 @@
 # ============================================================
 # Z12 AI CFO Suite - Dockerfile Multi-Stage Build
 # ZAKI OS Platform v3.2 - React 18 + TypeScript + Vite + Nginx
-# VPS Deploy: 147.93.40.124
 # ============================================================
 
 # -- Stage 1: Builder (Node 20 Alpine) ----------------------
@@ -15,7 +14,8 @@ WORKDIR /app
 
 # Install dependencies first (leverage Docker cache)
 COPY package.json package-lock.json* ./
-RUN npm ci --frozen-lockfile 2>/dev/null || npm install
+# Audit 2026-11 : pas de repli sur "npm install" (il ignorerait le lockfile) ; l'échec doit être visible.
+RUN npm ci
 
 # Copy all source files
 COPY . .
@@ -37,8 +37,6 @@ COPY nginx.conf /etc/nginx/conf.d/default.conf
 
 # Copy built React app from builder stage
 COPY --from=builder /app/dist /usr/share/nginx/html
-
-# Use existing nginx user (GID 101 pre-exists in nginx:alpine) && \
 
 # Expose port 80
 EXPOSE 80

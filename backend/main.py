@@ -888,7 +888,7 @@ async def api_memory_list(agent: str = None, user_id: str = Depends(get_current_
     try:
         import psycopg
         from psycopg.rows import dict_row
-        DATABASE_URL_MEM = os.getenv("DATABASE_URL", "postgresql://ai_cfo:ai_cfo_password@db:5432/ai_cfo_db")
+        DATABASE_URL_MEM = os.getenv("DATABASE_URL", "")
         with psycopg.connect(DATABASE_URL_MEM, row_factory=dict_row) as conn:
             with conn.cursor() as cur:
                 if agent:
@@ -934,7 +934,7 @@ async def api_memory_clear(agent: str = None, user_id: str = Depends(get_current
     """Efface les memories d un user (optionnel: seulement pour un agent specifique)"""
     try:
         import psycopg
-        DATABASE_URL_MEM = os.getenv("DATABASE_URL", "postgresql://ai_cfo:ai_cfo_password@db:5432/ai_cfo_db")
+        DATABASE_URL_MEM = os.getenv("DATABASE_URL", "")
         with psycopg.connect(DATABASE_URL_MEM) as conn:
             with conn.cursor() as cur:
                 if agent:
@@ -956,7 +956,9 @@ async def api_privacy_my_data(user_id: str = Depends(get_current_user_id)):
     """Droit d'acces - export de toutes les donnees d'un utilisateur (Loi 25 art.27)"""
     import psycopg
     from psycopg.rows import dict_row
-    DB_URL = os.getenv("DATABASE_URL", "postgresql://ai_cfo:ai_cfo_password@db:5432/ai_cfo_db")
+    DB_URL = os.getenv("DATABASE_URL", "").strip()
+    if not DB_URL:
+        raise HTTPException(status_code=503, detail="Base de donnees non configuree")
     result = {}
     try:
         with psycopg.connect(DB_URL, row_factory=dict_row) as conn:
@@ -999,6 +1001,27 @@ async def api_privacy_my_data(user_id: str = Depends(get_current_user_id)):
                     for r in cur.fetchall()
                 ]
 
+        # Usage facture et budget (tables optionnelles : une table absente n'empeche pas l'export)
+        for _key, _sql in (
+            ("usage", "SELECT created_at, kind, model, cost_usd, tokens_in, tokens_out FROM cfo_usage WHERE user_id = %s ORDER BY created_at DESC LIMIT 1000"),
+            ("budget", "SELECT budget_cad, updated_at FROM cfo_budgets WHERE user_id = %s"),
+        ):
+            try:
+                with psycopg.connect(DB_URL, row_factory=dict_row) as _c, _c.cursor() as _cur:
+                    _cur.execute(_sql, (user_id,))
+                    result[_key] = [{k: (v.isoformat() if hasattr(v, "isoformat") else (float(v) if hasattr(v, "as_tuple") else v))
+                                     for k, v in r.items()} for r in _cur.fetchall()]
+            except Exception:  # noqa: BLE001
+                result[_key] = []
+        try:
+            from kb_storage import list_kb_docs
+            result["documents"] = [
+                {k: d.get(k) for k in ("doc_id", "filename", "content_type", "sensibilite", "uploaded_at") if k in d}
+                for d in list_kb_docs(owner_id=user_id)
+            ]
+        except Exception:  # noqa: BLE001
+            result["documents"] = []
+
         result["export_date"] = __import__("datetime").datetime.utcnow().isoformat() + "Z"
         result["law"] = "Loi 25 (Quebec) - DSAR Export"
         return result
@@ -1011,7 +1034,9 @@ async def api_privacy_my_data(user_id: str = Depends(get_current_user_id)):
 async def api_privacy_delete_account(user_id: str = Depends(get_current_user_id)):
     """Droit a l'effacement - suppression complete du compte (Loi 25 art.28)"""
     import psycopg
-    DB_URL = os.getenv("DATABASE_URL", "postgresql://ai_cfo:ai_cfo_password@db:5432/ai_cfo_db")
+    DB_URL = os.getenv("DATABASE_URL", "").strip()
+    if not DB_URL:
+        raise HTTPException(status_code=503, detail="Base de donnees non configuree")
     deleted = {}
     try:
         with psycopg.connect(DB_URL) as conn:
@@ -1025,10 +1050,26 @@ async def api_privacy_delete_account(user_id: str = Depends(get_current_user_id)
                 deleted["sessions"] = cur.rowcount
 
                 # 3. Supprimer le compte local
+                cur.execute("DELETE FROM password_reset_tokens WHERE user_id::text = %s", (user_id,))
                 cur.execute("DELETE FROM local_users WHERE id::text = %s", (user_id,))
                 deleted["account"] = cur.rowcount
 
                 conn.commit()
+
+        # 3b. Compte Google (jetons chiffres inclus), usage et budget : une table absente ou un
+        # identifiant d'un autre type ne doit pas bloquer l'effacement du reste.
+        for _key, _sql in (
+            ("google_account", "DELETE FROM users WHERE id::text = %s"),
+            ("usage", "DELETE FROM cfo_usage WHERE user_id = %s"),
+            ("budget", "DELETE FROM cfo_budgets WHERE user_id = %s"),
+        ):
+            try:
+                with psycopg.connect(DB_URL) as _c, _c.cursor() as _cur:
+                    _cur.execute(_sql, (user_id,))
+                    deleted[_key] = _cur.rowcount
+                    _c.commit()
+            except Exception:  # noqa: BLE001
+                deleted[_key] = 0
 
         # 4. Documents : base de connaissances + fichiers uploades (hors transaction SQL)
         from kb_storage import delete_owner_data
@@ -1052,11 +1093,28 @@ if __name__ == "__main__":
     uvicorn.run(app, host="0.0.0.0", port=8000, reload=True)
 
 @app.post("/api/auth/logout")
-@app.get("/api/auth/logout")
-async def logout(response: Response):
-    response.delete_cookie("access_token", path="/")
-    response.delete_cookie("token", path="/")
-    response.delete_cookie("jwt", path="/")
-    response.delete_cookie("session", path="/")
-    response.delete_cookie("phoenix_session", path="/")
+async def logout(request: Request, response: Response):
+    """Ferme la session côté serveur (jti révoqué en base), puis efface les cookies.
+    POST uniquement : un GET de déconnexion pouvait être déclenché depuis un autre site."""
+    token = request.cookies.get("phoenix_session")
+    secret = None
+    try:
+        from auth import get_session_secret
+        secret = get_session_secret()
+    except Exception:  # noqa: BLE001
+        pass
+    if token and secret:
+        try:
+            import jwt as _jwt
+            import psycopg as _psycopg
+            _jti = _jwt.decode(token, secret, algorithms=["HS256"], audience="phoenix").get("jti")
+            _db = os.getenv("DATABASE_URL", "").strip()
+            if _jti and _db:
+                with _psycopg.connect(_db) as _c, _c.cursor() as _cur:
+                    _cur.execute("UPDATE user_sessions SET is_active = FALSE WHERE jti = %s", (_jti,))
+                    _c.commit()
+        except Exception as _e:  # noqa: BLE001
+            print(f"[WARN] logout: révocation impossible ({type(_e).__name__})")
+    for _name in ("access_token", "token", "jwt", "session", "phoenix_session"):
+        response.delete_cookie(_name, path="/")
     return {"status": "logged out"}
