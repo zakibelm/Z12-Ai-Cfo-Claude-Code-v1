@@ -1,0 +1,96 @@
+name: Test and deploy
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  backend-tests:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: backend
+    # Vraie base pgvector : les tests d'intégration vérifient le SQL de l'ingestion,
+    # recherche sémantique comprise.
+    services:
+      postgres:
+        image: pgvector/pgvector:pg16
+        env:
+          POSTGRES_USER: z12
+          POSTGRES_PASSWORD: z12-ci-only
+          POSTGRES_DB: z12test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U z12 -d z12test"
+          --health-interval 5s --health-timeout 5s --health-retries 10
+    env:
+      Z12_TEST_DATABASE_URL: postgresql://z12:z12-ci-only@localhost:5432/z12test
+    steps:
+      - name: Install OCR and PDF tools
+        working-directory: .
+        run: sudo apt-get update && sudo apt-get install -y --no-install-recommends tesseract-ocr tesseract-ocr-fra poppler-utils
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+          cache-dependency-path: backend/requirements.txt
+      - name: Install dependencies
+        run: pip install -r requirements.txt pytest pytest-asyncio
+      # Les tests de sécurité (tests/security) bloquent le déploiement :
+      # contournement d'auth, cloisonnement entre utilisateurs, webhook, quotas.
+      - name: Run backend tests
+        run: python -m pytest tests test_main.py -q -o addopts="" -o asyncio_mode=auto
+
+  frontend-tests:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: 'npm'
+      - name: Install dependencies
+        run: npm ci
+      - name: Run Vitest tests
+        run: npm test -- --run --testTimeout=30000
+      - name: Aucun nom non défini dans l'interface
+        # Un nom non défini fait planter l'écran au rendu (« auth is not defined »).
+        run: |
+          if npx tsc --noEmit -p . 2>&1 | grep -E "error TS(2304|2552)"; then
+            echo "Nom non défini détecté"; exit 1
+          fi
+      - name: Build
+        run: npm run build
+      - uses: actions/upload-artifact@v4
+        with:
+          name: dist
+          path: dist/
+          retention-days: 1
+
+  deploy:
+    needs: [backend-tests, frontend-tests]
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: dist
+          path: dist/
+      # Définir les secrets SSH_HOST et SSH_USER (utilisateur de déploiement non-root) :
+      # les valeurs de repli ci-dessous ne servent qu'à ne pas casser le déploiement actuel.
+      - name: Deploy frontend to VPS
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          host: ${{ secrets.SSH_HOST || '147.93.40.124' }}
+          username: ${{ secrets.SSH_USER || 'root' }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          source: "dist/"
+          target: "/var/www/z12-cfo/"
+          strip_components: 0

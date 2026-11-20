@@ -1,0 +1,29 @@
+node_modules/
+dist/
+.env
+.env.local
+.env.*.local
+*.log
+.DS_Store
+.vscode/
+.idea/
+*.backup
+__pycache__/
+*.pyc
+
+# Sécurité (audit 2026-11) : jamais de sauvegarde, d'export ni de secret dans le dépôt
+backups/
+*.tar.gz
+*.tgz
+*.zip
+*.sql
+*.dump
+*.pem
+*.key
+.env.*
+!.env.example
+
+# Données d'exécution
+uploads/
+backend/uploads/
+backend/data/
