@@ -29,6 +29,11 @@ services:
       JWT_SECRET: ${JWT_SECRET}
       AUTH_MODE: ${AUTH_MODE:-strict}
       SESSION_JWT_SECRET: ${JWT_SECRET}
+      # Chiffrement des clés fournisseur et jetons Google en base (voir .env.example)
+      TOKEN_ENC_KEY: ${TOKEN_ENC_KEY:-}
+      # Réseaux de confiance pour X-Forwarded-For (nginx / pont Docker) : sans cela, tous les clients
+      # partagent la même IP et le limiteur d'abus les traite comme un seul.
+      FORWARDED_ALLOW_IPS: ${FORWARDED_ALLOW_IPS:-127.0.0.1,172.16.0.0/12,10.0.0.0/8,192.168.0.0/16}
       INTERNAL_SERVICE_SECRET: ${INTERNAL_SERVICE_SECRET:-}
       FRONTEND_URL: ${FRONTEND_URL:-${PUBLIC_URL:-http://localhost}}
       ALLOWED_ORIGINS: ${ALLOWED_ORIGINS:-https://cfo.optigenius.pro}

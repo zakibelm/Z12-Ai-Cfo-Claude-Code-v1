@@ -123,6 +123,15 @@ async def _security_startup() -> None:
             print(f"[WARN] {_interrupted} document(s) dont l'indexation a été interrompue par le redémarrage : à réindexer")
         import invitations
         invitations.ensure_schema()
+        try:
+            import settings as _settings
+            import secret_box as _sb
+            _sb._fernet()  # lève si TOKEN_ENC_KEY manque : on le signale sans bloquer le démarrage
+            _migrated = _settings.encrypt_legacy_keys()
+            if _migrated:
+                print(f"[INFO] {_migrated} clé(s) fournisseur chiffrée(s) (migration)")
+        except Exception as _k:  # noqa: BLE001
+            print(f"[WARN] Chiffrement des clés utilisateur indisponible : {type(_k).__name__} — définir TOKEN_ENC_KEY")
         import budget
         budget.ensure_schema()
         print(f"[INFO] Budget : {budget.trial_budget_cad():.2f} $ CA par compte, "

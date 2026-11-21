@@ -164,7 +164,7 @@ def _google_signup_allowed(google_sub: str, email: str) -> bool:
 @router.get("/google/login")
 async def google_login(request: Request, redirect_to: Optional[str] = None):
     if not (GOOGLE_CLIENT_ID and GOOGLE_REDIRECT_URI):
-        raise HTTPException(500, "Google OAuth not configured on server")
+        raise HTTPException(503, "La connexion Google n'est pas configurée sur ce serveur")
     # Redirection ouverte : seule une destination sur notre propre frontend est acceptée.
     if redirect_to and not (redirect_to == FRONTEND_URL or redirect_to.startswith(FRONTEND_URL + "/")):
         redirect_to = None

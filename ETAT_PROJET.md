@@ -13,7 +13,14 @@ Les sections plus bas (v5.8, mai 2026) sont conservées comme **historique**.
 - **Exploitation** : `scripts/backup.sh` (quotidien, rotation 14 j), `scripts/restore_test.sh` (restauration dans une base jetable), `scripts/install_backup_cron.sh`, `update.sh` réécrit (sauvegarde → mise à jour → santé → retour arrière de la base).
 - **CI** : tests backend (dont sécurité + benchmarks), tests frontend, erreurs de syntaxe TS et noms non définis bloquants, build. Les tests `tests/api/*` visent un serveur réel et ne tournent que si `TEST_API_URL` (+ `TEST_EMAIL`/`TEST_PASSWORD`) sont définis.
 
+### Audit du 21 nov. 2026 — correctifs appliqués
+- Limiteur d'abus : `FORWARDED_ALLOW_IPS` (pont Docker + réseaux privés) pour que chaque client ait sa propre IP. **À vérifier en production** : 2 adresses différentes doivent avoir des quotas distincts.
+- Clés OpenRouter des utilisateurs chiffrées (Fernet, `TOKEN_ENC_KEY`), migration automatique des anciennes clés en clair au démarrage, refus d'écrire en clair si la clé manque.
+- `/auth/google/login` renvoie 503 (et non 500) si Google n'est pas configuré.
+- Reste : jeu de questions validé par un CPA, rapprochement sur relevés réels, MFA administrateur, Redis si plusieurs workers.
+
 ### Ce qui reste à faire de ton côté (hors code)
+0. **Générer `TOKEN_ENC_KEY`** (commande dans `.env.example`) et la sauvegarder hors du serveur : sans elle, impossible d'enregistrer une clé utilisateur.
 1. Secrets GitHub : `SSH_HOST`, `SSH_USER`, `SSH_PRIVATE_KEY` ; valeurs de `.env` sur le VPS (jamais dans Git).
 2. Lancer `scripts/install_backup_cron.sh` une fois sur le VPS, puis vérifier `restore_test.sh`.
 3. Gate 2 : 20 relevés bancaires réels à 95 %, CGU/licence, assurance RC, tarification, bêta avec un CPA.
