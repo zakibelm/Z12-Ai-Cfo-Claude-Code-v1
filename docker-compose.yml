@@ -50,6 +50,8 @@ services:
       # Administration, inscription et budgets (voir .env.example). Sans ADMIN_USER_IDS,
       # aucun compte n'est administrateur et le RAG metier n'est pas servi.
       ADMIN_USER_IDS: ${ADMIN_USER_IDS:-}
+      # Super administrateur (toi) : configuration seulement, ne lit pas les documents des clients.
+      SUPERADMIN_USER_IDS: ${SUPERADMIN_USER_IDS:-}
       REGISTRATION_MODE: ${REGISTRATION_MODE:-invite}
       GOOGLE_ALLOWED_EMAILS: ${GOOGLE_ALLOWED_EMAILS:-}
       TRIAL_BUDGET_CAD: ${TRIAL_BUDGET_CAD:-3}

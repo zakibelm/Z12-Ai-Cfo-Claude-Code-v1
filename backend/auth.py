@@ -229,7 +229,7 @@ def _user_from_cookie(request: Request) -> str | None:
 # Dependency
 # ─────────────────────────────────────────────────────────────────────────────
 
-async def get_current_user_id(
+async def _resolve_user_id(
     request: Request,
     authorization: Annotated[str | None, Header()] = None,
     x_user_id: Annotated[str | None, Header()] = None,
@@ -277,6 +277,21 @@ async def get_current_user_id(
     if x_user_id and _is_valid_user_id(x_user_id):
         return x_user_id
     return os.getenv("DEV_DEFAULT_USER_ID", "00000000-0000-0000-0000-000000000001")
+
+
+async def get_current_user_id(
+    request: Request,
+    authorization: Annotated[str | None, Header()] = None,
+    x_user_id: Annotated[str | None, Header()] = None,
+    x_internal_service: Annotated[str | None, Header()] = None,
+) -> str:
+    """Identité + refus par défaut des comptes « client » hors de leur liste blanche (voir roles.py)."""
+    uid = await _resolve_user_id(request, authorization, x_user_id, x_internal_service)
+    if uid != INTERNAL_SERVICE_USER_ID:
+        import roles
+
+        roles.enforce_client_scope(uid, request.method, request.url.path)
+    return uid
 
 
 # Alias pour annotation plus claire côté endpoints

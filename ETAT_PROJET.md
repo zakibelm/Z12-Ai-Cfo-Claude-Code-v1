@@ -19,6 +19,11 @@ Les sections plus bas (v5.8, mai 2026) sont conservées comme **historique**.
 - `/auth/google/login` renvoie 503 (et non 500) si Google n'est pas configuré.
 - Reste : jeu de questions validé par un CPA, rapprochement sur relevés réels, MFA administrateur, Redis si plusieurs workers.
 
+### Rôles (phase 1 livrée le 21 nov. 2026)
+- `backend/roles.py` : superadmin / cpa_admin / member / client, table `cfo_user_roles`, API `/api/admin/roles`.
+- Un compte **client** est refusé partout sauf sur une liste blanche (dépôt et consultation de ses documents), contrôlé au point unique d'identification ; test automatique sur toutes les routes.
+- Prochaines phases : invitation « client » + dossier forcé, vue CPA, portail client (plan dans le projet Claude).
+
 ### Ce qui reste à faire de ton côté (hors code)
 0. **Générer `TOKEN_ENC_KEY`** (commande dans `.env.example`) et la sauvegarder hors du serveur : sans elle, impossible d'enregistrer une clé utilisateur.
 1. Secrets GitHub : `SSH_HOST`, `SSH_USER`, `SSH_PRIVATE_KEY` ; valeurs de `.env` sur le VPS (jamais dans Git).

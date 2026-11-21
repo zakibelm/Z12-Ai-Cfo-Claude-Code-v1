@@ -132,6 +132,8 @@ async def _security_startup() -> None:
                 print(f"[INFO] {_migrated} clé(s) fournisseur chiffrée(s) (migration)")
         except Exception as _k:  # noqa: BLE001
             print(f"[WARN] Chiffrement des clés utilisateur indisponible : {type(_k).__name__} — définir TOKEN_ENC_KEY")
+        import roles
+        roles.ensure_schema()
         import budget
         budget.ensure_schema()
         print(f"[INFO] Budget : {budget.trial_budget_cad():.2f} $ CA par compte, "
@@ -175,6 +177,8 @@ except Exception as _e:
 # WhatsApp router
 # ────────────────────────────────────────────────────────────────
 # Le webhook porte sa propre preuve (signature Twilio) ; /status exige une session.
+from roles import router as roles_router
+app.include_router(roles_router)
 app.include_router(whatsapp_router)
 app.include_router(
     settings_router, prefix="/api/settings", tags=["settings"],

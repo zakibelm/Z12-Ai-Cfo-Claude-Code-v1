@@ -119,7 +119,13 @@ auth_limiter = RateLimiter(int(os.getenv("AUTH_RATE_PER_MINUTE", "10")), 60.0)
 
 def admin_ids() -> set[str]:
     """Identifiants des comptes administrateurs (ADMIN_USER_IDS, séparés par des virgules)."""
-    return {part.strip() for part in os.getenv("ADMIN_USER_IDS", "").split(",") if part.strip()}
+    env = {part.strip() for part in os.getenv("ADMIN_USER_IDS", "").split(",") if part.strip()}
+    try:
+        import roles
+
+        return env | roles.superadmin_ids() | roles.ids_with_role("cpa_admin")
+    except Exception:  # noqa: BLE001 — jamais d'élévation de droits sur erreur
+        return env
 
 
 def is_admin(user_id: str | None) -> bool:
