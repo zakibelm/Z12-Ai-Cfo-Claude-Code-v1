@@ -289,6 +289,7 @@ export function Studio({ t, P, lang, agentSettings, openrouterKey, convs, setCon
                               {workflow?.priority==="urgent" && <div className="orch-pill" style={{background:"var(--warn-soft)",color:"var(--warn)",borderColor:"var(--warn)"}}>=4 URGENT</div>}
                               {workflow?.priority==="high"   && <div className="orch-pill" style={{background:"var(--gold-soft)",color:"var(--gold)",borderColor:"var(--gold)"}}>⚠️ {lang==="fr"?"PRIORITAIRE":"HIGH"}</div>}
                               {workflow && !workflow.priority?.match(/urgent|high/) && <div className="orch-pill">é {workflow.type?.toUpperCase()}</div>}
+                              {workflow?.fallback && <div className="orch-pill" role="status" title={workflow.user_message} style={{background:"var(--warn-soft)",color:"var(--warn)",borderColor:"var(--warn)"}}>⚠️ {lang==="fr"?"ROUTAGE AUTO":"AUTO ROUTING"}</div>}
                             </div>
                             {/* Phase plan */}
                             {wfSteps.length > 0 && (

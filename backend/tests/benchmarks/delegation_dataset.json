@@ -1,0 +1,22 @@
+[
+ {"q": "Comment réduire mon impôt corporatif et récupérer la TPS/TVQ ?", "expect": ["sophie"]},
+ {"q": "Mon entreprise est-elle admissible à la RS&DE ?", "expect": ["sophie"]},
+ {"q": "Fais un audit du contrôle interne de mes comptes fournisseurs", "expect": ["alexandre"]},
+ {"q": "Quels sont les risques de fraude dans mes processus de paie ?", "expect": ["alexandre"]},
+ {"q": "Ma trésorerie est tendue, comment améliorer mon cashflow et mon fonds de roulement ?", "expect": ["natalie"]},
+ {"q": "Prévision de liquidité sur 90 jours", "expect": ["natalie"]},
+ {"q": "Suis-je conforme à la Loi 25 sur les données personnelles ?", "expect": ["isabelle"]},
+ {"q": "Dois-je faire une EFVP pour mon nouveau CRM ?", "expect": ["isabelle"]},
+ {"q": "Analyse mes ratios de rentabilité et mon bilan", "expect": ["marc"]},
+ {"q": "Compare ma marge à celle du secteur (benchmark)", "expect": ["marc"]},
+ {"q": "Valorisation DCF pour l'acquisition d'une PME", "expect": ["sarah"]},
+ {"q": "Due diligence avant un investissement en capital-risque", "expect": ["sarah"]},
+ {"q": "Extraire les données de ce relevé bancaire en PDF", "expect": ["jeanfrancois"]},
+ {"q": "Numériser et extraire les montants de mes factures", "expect": ["jeanfrancois"]},
+ {"q": "Quelles sont les nouvelles réglementations et la jurisprudence récente ?", "expect": ["emilie"]},
+ {"q": "Veille sur le budget fédéral et les changements de loi", "expect": ["emilie"]},
+ {"q": "Quelles subventions et quels crédits d'impôt puis-je obtenir (CDAP, PARI) ?", "expect": ["patrick"]},
+ {"q": "Programmes gouvernementaux CanExport pour exporter", "expect": ["patrick"]},
+ {"q": "Optimiser l'impôt et vérifier la conformité Loi 25", "expect": ["sophie", "isabelle"]},
+ {"q": "Audit des risques et valorisation avant acquisition", "expect": ["alexandre", "sarah"]}
+]

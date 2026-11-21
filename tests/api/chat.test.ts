@@ -1,8 +1,8 @@
 import { describe, it, expect, beforeAll } from 'vitest';
 
-const BASE_URL = process.env.TEST_API_URL || 'https://cfo.optigenius.pro';
-const TEST_EMAIL = process.env.TEST_EMAIL || 'zak3@test.com';
-const TEST_PASSWORD = process.env.TEST_PASSWORD || 'test123';
+const BASE_URL = process.env.TEST_API_URL || '';
+const TEST_EMAIL = process.env.TEST_EMAIL || '';
+const TEST_PASSWORD = process.env.TEST_PASSWORD || '';
 
 let authToken: string | null = null;
 
@@ -18,7 +18,8 @@ async function getToken(): Promise<string> {
   return data.access_token || data.token;
 }
 
-describe('API /api/chat — authentication guard', () => {
+const suite = BASE_URL ? describe : describe.skip;
+suite('API /api/chat — authentication guard', () => {
   it('should return 401 when no token is provided', async () => {
     const res = await fetch(`${BASE_URL}/api/chat`, {
       method: 'POST',
@@ -62,7 +63,7 @@ describe('API /api/chat — authentication guard', () => {
   }, 15000);
 });
 
-describe('API /api/chat — request validation', () => {
+suite('API /api/chat — request validation', () => {
   it('should return 422 or 400 for a malformed request body (even with auth)', async () => {
     const res = await fetch(`${BASE_URL}/api/chat`, {
       method: 'POST',

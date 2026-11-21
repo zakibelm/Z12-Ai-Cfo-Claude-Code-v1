@@ -12,7 +12,7 @@ test.describe('E2E — Authentification', () => {
     expect(hasLoginForm || hasApp).toBe(true);
   });
 
-  test('login avec credentials valides redirige vers l'application', async ({ page }) => {
+  test("login avec credentials valides redirige vers l'application", async ({ page }) => {
     await page.goto('/');
     
     // Check if already logged in

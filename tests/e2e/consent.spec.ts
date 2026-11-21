@@ -16,7 +16,7 @@ test.describe('E2E — ConsentBanner Loi 25', () => {
 
     // Look for consent banner
     const consentBanner = page.locator(
-      '[class*="consent"], [id*="consent"], text="J'accepte", text="consentement", text="Loi 25"'
+      `[class*="consent"], [id*="consent"], text="J'accepte", text="consentement", text="Loi 25"`
     ).first();
     
     const bannerVisible = await consentBanner.isVisible().catch(() => false);
@@ -44,7 +44,7 @@ test.describe('E2E — ConsentBanner Loi 25', () => {
 
     // Try to find and click the consent accept button
     const acceptBtn = page.locator(
-      'button:has-text("J'accepte"), button:has-text("Accepter"), button:has-text("J'accepte et je continue")'
+      `button:has-text("J'accepte"), button:has-text("Accepter"), button:has-text("J'accepte et je continue")`
     ).first();
     
     const btnVisible = await acceptBtn.isVisible().catch(() => false);

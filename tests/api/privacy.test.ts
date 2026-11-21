@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 
-const BASE_URL = process.env.TEST_API_URL || 'https://cfo.optigenius.pro';
+const BASE_URL = process.env.TEST_API_URL || '';
 
 async function getToken(): Promise<string | null> {
   try {
@@ -8,8 +8,8 @@ async function getToken(): Promise<string | null> {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        email: process.env.TEST_EMAIL || 'zak3@test.com',
-        password: process.env.TEST_PASSWORD || 'test123',
+        email: process.env.TEST_EMAIL || '',
+        password: process.env.TEST_PASSWORD || '',
       }),
     });
     if (!res.ok) return null;
@@ -20,7 +20,8 @@ async function getToken(): Promise<string | null> {
   }
 }
 
-describe('API /api/privacy/my-data — Loi 25 Art. 27 droit acces', () => {
+const suite = BASE_URL ? describe : describe.skip;
+suite('API /api/privacy/my-data — Loi 25 Art. 27 droit acces', () => {
   it('should return 401 without auth token', async () => {
     const res = await fetch(`${BASE_URL}/api/privacy/my-data`);
     expect(res.status).toBe(401);
@@ -45,7 +46,7 @@ describe('API /api/privacy/my-data — Loi 25 Art. 27 droit acces', () => {
   }, 15000);
 });
 
-describe('API /api/privacy/delete-my-account — Loi 25 Art. 28 droit effacement', () => {
+suite('API /api/privacy/delete-my-account — Loi 25 Art. 28 droit effacement', () => {
   it('should return 401 without auth token', async () => {
     const res = await fetch(`${BASE_URL}/api/privacy/delete-my-account`, {
       method: 'DELETE',

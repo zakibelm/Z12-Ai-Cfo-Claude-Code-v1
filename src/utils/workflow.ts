@@ -211,6 +211,39 @@ Respond ONLY with valid JSON, no text before or after:
 }`
 };
 
+export const MAX_PLAN_AGENTS = 4;
+const PLAN_TYPES = ["single", "parallel", "sequential", "hybrid"];
+
+/**
+ * Rend un plan d'orchestration (souvent issu d'un LLM) sûr à exécuter :
+ * agents inconnus retirés (y compris dans les phases), doublons supprimés, maximum 4 agents,
+ * type cohérent avec le nombre d'agents. Si rien de valide ne reste, repli sur le routage
+ * par mots-clés avec `fallback: true` et un message pour l'utilisateur.
+ */
+export function sanitizePlan(plan, query = "") {
+  const known = new Set(AGENTS_DEF.map(a => a.id));
+  const clean = list => [...new Set((Array.isArray(list) ? list : []).filter(id => typeof id === "string" && known.has(id)))];
+  let agents = clean(plan?.agents).slice(0, MAX_PLAN_AGENTS);
+  if (!agents.length) {
+    const fast = fastRoute(query);
+    return { type: "single", priority: "normal", agents: [fast || "FinancialAgent"],
+      reason: "Routage automatique de secours", estimated_seconds: 10, synthesis_needed: false, fallback: true,
+      user_message: "Plan de l'orchestrateur invalide : routage automatique utilisé." };
+  }
+  const keep = new Set(agents);
+  const phases = (Array.isArray(plan?.phases) ? plan.phases : [])
+    .map(ph => ({ ...ph, agents: clean(ph?.agents).filter(id => keep.has(id)) }))
+    .filter(ph => ph.agents.length);
+  let type = PLAN_TYPES.includes(plan?.type) ? plan.type : (agents.length === 1 ? "single" : "parallel");
+  if (agents.length === 1) type = "single";
+  else if (type === "single") type = "parallel";
+  if (type === "hybrid" && !phases.length) type = "parallel";
+  const out = { ...plan, type, agents, fallback: !!plan?.fallback };
+  // Les consommateurs testent `plan.phases` : on ne le garde que s'il sert (hybride).
+  if (type === "hybrid") out.phases = phases; else delete out.phases;
+  return out;
+}
+
 // Analyze request and return workflow plan
 export async function analyzeWorkflow(query, historyMsgs, lang, openrouterKey) {
   // Aucune clé n'est exigée dans le navigateur : le serveur utilise la clé de la plateforme et
@@ -233,16 +266,11 @@ export async function analyzeWorkflow(query, historyMsgs, lang, openrouterKey) {
     // Extract JSON from response
     const jsonMatch = raw.match(/\{[\s\S]*\}/);
     if (jsonMatch) {
-      const plan = JSON.parse(jsonMatch[0]);
-      // Validate agents exist
-      if (plan.agents) plan.agents = plan.agents.filter(id => AGENTS_DEF.find(a=>a.id===id));
-      return plan;
+      return sanitizePlan(JSON.parse(jsonMatch[0]), query);
     }
   } catch(e) { console.warn("Orchestrator parse error:", e); }
   // Fallback: fast route
-  const fast = fastRoute(query);
-  return { type:"single", priority:"normal", agents:[fast||"FinancialAgent"],
-    reason:"Routing automatique", user_message:"", estimated_seconds:10, synthesis_needed:false };
+  return sanitizePlan(null, query);
 }
 
 // Execute a workflow plan — returns array of {agentId, name, reply, status}
@@ -419,26 +447,20 @@ export async function callAgent(agentId, system, messages, openrouterKey, agentM
 }
 
 export function fastRoute(msg) {
-  const m = msg.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g,"");
-  if (/t1|t2|tps|tvq|gst|hst|fiscal|impot|cra|revenu.quebec|deduction|amortissement/.test(m)) return "TaxAgent";
-  if (/audit|ifrs|aspe|verification|controle.interne|cpa|materialite/.test(m)) return "AuditAgent";
-  if (/tresorerie|cash.flow|liquidite|flux.de|budget|prevision.de.caisse|bfr/.test(m)) return "CashFlowAgent";
-  if (/loi.25|casl|pipeda|conformite|donnees.personnelles|consentement|efvp/.test(m)) return "ComplianceAgent";
-  if (/ratio|analyse.financiere|benchmark|baiia|ebitda|marge|solvabilite/.test(m)) return "FinancialAgent";
-  if (/investissement|roi|tir|van|dcf|portefeuille|acquisition/.test(m)) return "InvestmentAgent";
-  if (/scan|ocr|photo|facture.scan|releve.scan|manuscrit/.test(m)) return "OCRAgent";
-  if (/veille|actualite|mise.a.jour|nouveaute|changement.recent|derniere.loi|nouvelle.norme|bulletin|circulaire|nouvelles.fiscales/.test(m)) return "VeilleAgent";
-  if (/subvention|aide.financiere|programme.financement|grant|bourse|sred|irap|pari|investissement.quebec|cld|mrc|financement.gouvern|non.gouvern|fondation|accelerateur/.test(m)) return "SubventionsAgent";
+  const m = (msg || "").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g,"");
+  // Du plus spécifique au plus général : « crédit d'impôt » est une subvention avant d'être un impôt.
+  if (/subvention|aide.financiere|programme.{0,12}(financement|gouvernement)|grant|bourse|irap|\bpari\b|investissement.quebec|\bcld\b|\bmrc\b|financement.gouvern|non.gouvern|fondation|accelerateur|canexport|\bcdap\b|credits?.d.impot/.test(m)) return "SubventionsAgent";
+  if (/veille|actualite|mise.a.jour|nouveaute|changement.{0,12}(recent|de.loi)|derniere.loi|nouvelle.norme|nouvelles?.reglementation|jurisprudence|bulletin|circulaire|nouvelles.fiscales|budget.(federal|du.quebec)/.test(m)) return "VeilleAgent";
+  if (/\bocr\b|scan|numeris|photo|extrai|extraction|manuscrit|releve.bancaire/.test(m)) return "OCRAgent";
+  if (/loi.25|casl|pipeda|conformite|donnees.personnelles|vie.privee|consentement|efvp/.test(m)) return "ComplianceAgent";
+  if (/audit|ifrs|aspe|ncecf|verification|controle.interne|materialite|fraude|risques?/.test(m)) return "AuditAgent";
+  if (/tresorerie|cash.?flow|liquidite|flux.de|prevision.de.caisse|bfr|fonds.de.roulement/.test(m)) return "CashFlowAgent";
+  if (/investissement|\broi\b|\btir\b|\bvan\b|dcf|portefeuille|acquisition|valorisation|due.diligence/.test(m)) return "InvestmentAgent";
+  if (/ratio|analyse.financiere|benchmark|baiia|ebitda|marge|solvabilite|rentabilite|bilan/.test(m)) return "FinancialAgent";
+  if (/\bt1\b|\bt2\b|tps|tvq|gst|hst|fiscal|impot|cra|revenu.quebec|deduction|amortissement|rs.?&?.?de|sred/.test(m)) return "TaxAgent";
   return null;
 }
 
-export async function routeViaAPI(msg) {
-  try {
-    const r = await callClaude("You are a routing agent. Given a user message, return ONLY the agent name — one of: TaxAgent, AuditAgent, CashFlowAgent, ComplianceAgent, FinancialAgent, InvestmentAgent, OCRAgent. Return nothing else.", [{role:"user",content:msg}], openrouterKey);
-    const name = r.trim().replace(/[^a-zA-Z]/g,"");
-    return AGENTS_DEF.find(a=>a.id===name)?.id || "FinancialAgent";
-  } catch { return "FinancialAgent"; }
-}
 
 const card = (P, extra={}) => ({ background:P.card, border:`1px solid ${P.border}`, borderRadius:12, ...extra });
 

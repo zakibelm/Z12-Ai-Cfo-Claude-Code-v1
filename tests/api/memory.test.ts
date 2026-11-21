@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 
-const BASE_URL = process.env.TEST_API_URL || 'https://cfo.optigenius.pro';
+const BASE_URL = process.env.TEST_API_URL || '';
 
 async function getToken(): Promise<string | null> {
   try {
@@ -8,8 +8,8 @@ async function getToken(): Promise<string | null> {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        email: process.env.TEST_EMAIL || 'zak3@test.com',
-        password: process.env.TEST_PASSWORD || 'test123',
+        email: process.env.TEST_EMAIL || '',
+        password: process.env.TEST_PASSWORD || '',
       }),
     });
     if (!res.ok) return null;
@@ -20,7 +20,8 @@ async function getToken(): Promise<string | null> {
   }
 }
 
-describe('API /api/memory/list', () => {
+const suite = BASE_URL ? describe : describe.skip;
+suite('API /api/memory/list', () => {
   it('should return 401 without auth token', async () => {
     const res = await fetch(`${BASE_URL}/api/memory/list`);
     expect(res.status).toBe(401);
@@ -52,7 +53,7 @@ describe('API /api/memory/list', () => {
   }, 15000);
 });
 
-describe('API /api/memory/clear', () => {
+suite('API /api/memory/clear', () => {
   it('should return 401 without auth token', async () => {
     const res = await fetch(`${BASE_URL}/api/memory/clear`, {
       method: 'DELETE',

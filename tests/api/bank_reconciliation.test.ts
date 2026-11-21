@@ -8,7 +8,7 @@
 
 import { describe, it, expect } from 'vitest'
 
-const BASE_URL = process.env.TEST_API_URL || 'http://localhost:8000'
+const BASE_URL = process.env.TEST_API_URL || ''
 
 // CSV de test — format standardisé (montant unique)
 const RELEVE_CSV_SIMPLE = `Date,Description,Montant
@@ -32,7 +32,8 @@ const GL_CSV_DECALE = `Date,Libelle,Montant,Reference
 
 // ─── Tests de l'endpoint /api/bank/status ────────────────────────────────────
 
-describe('GET /api/bank/status', () => {
+const suite = BASE_URL ? describe : describe.skip;
+suite('GET /api/bank/status', () => {
   it('should return agent status', async () => {
     const res = await fetch(`${BASE_URL}/api/bank/status`)
     expect(res.status).toBe(200)
@@ -44,7 +45,7 @@ describe('GET /api/bank/status', () => {
 
 // ─── Tests de l'endpoint /api/bank/reconcile ─────────────────────────────────
 
-describe('POST /api/bank/reconcile — cas nominal', () => {
+suite('POST /api/bank/reconcile — cas nominal', () => {
   it('should match 3/3 transactions with identical amounts and dates', async () => {
     const res = await fetch(`${BASE_URL}/api/bank/reconcile`, {
       method: 'POST',
@@ -100,7 +101,7 @@ describe('POST /api/bank/reconcile — cas nominal', () => {
 
 // ─── Tests de validation des inputs ──────────────────────────────────────────
 
-describe('POST /api/bank/reconcile — validation', () => {
+suite('POST /api/bank/reconcile — validation', () => {
   it('should return 400 when releve_csv is empty', async () => {
     const res = await fetch(`${BASE_URL}/api/bank/reconcile`, {
       method: 'POST',

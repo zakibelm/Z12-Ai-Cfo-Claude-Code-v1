@@ -1,5 +1,27 @@
 # Z12 AI CFO — ÉTAT DU PROJET
 
+## ÉTAT ACTUEL — 20 novembre 2026 (v6.0, dépôt Z12-Ai-Cfo-Claude-Code-v1)
+
+Les sections plus bas (v5.8, mai 2026) sont conservées comme **historique**.
+
+### Ce qui est prêt côté code
+- **Sécurité** : audit + red team appliqués (voir `AUDIT_2026-11-20.md`) ; 12 tests de durcissement + suite complète verts.
+- **Équipe d'agents unifiée** : 9 spécialistes (Sophie, Alexandre, Natalie, Isabelle, Marc, Sarah, Jean-François, Émilie, Patrick). Source unique serveur : `backend/orchestrator/team.py` (prompts réutilisés de `agent_prompts.py`). Côté navigateur : `src/utils/agentsConfig.ts`.
+- **Délégation fiable** : le plan est assaini des deux côtés (`sanitizePlan` navigateur, `build_assessment` serveur) : agents inconnus retirés, doublons supprimés, **4 agents maximum**, repli par mots-clés **signalé à l'utilisateur** (pastille « routage auto » / événement SSE `warning`). Modèle de l'orchestrateur configurable : `ORCHESTRATOR_MODEL`.
+- **RAG** : `services/retrieval.py` (recherche hybride, séparation métier/client, citations, données confidentielles jamais envoyées au cloud). `services/rag_service.py` reste utilisé par `/query`.
+- **Benchmarks mesurés** (hors ligne, dans la CI) : délégation 20/20 côté serveur, ≥ 85 % côté navigateur ; RAG rappel@3 100 % sur le jeu d'essai, 0 fuite entre dossiers clients. Jeux : `backend/tests/benchmarks/*.json`. **À enrichir avec des cas réels de clients** avant de les considérer comme représentatifs.
+- **Exploitation** : `scripts/backup.sh` (quotidien, rotation 14 j), `scripts/restore_test.sh` (restauration dans une base jetable), `scripts/install_backup_cron.sh`, `update.sh` réécrit (sauvegarde → mise à jour → santé → retour arrière de la base).
+- **CI** : tests backend (dont sécurité + benchmarks), tests frontend, erreurs de syntaxe TS et noms non définis bloquants, build. Les tests `tests/api/*` visent un serveur réel et ne tournent que si `TEST_API_URL` (+ `TEST_EMAIL`/`TEST_PASSWORD`) sont définis.
+
+### Ce qui reste à faire de ton côté (hors code)
+1. Secrets GitHub : `SSH_HOST`, `SSH_USER`, `SSH_PRIVATE_KEY` ; valeurs de `.env` sur le VPS (jamais dans Git).
+2. Lancer `scripts/install_backup_cron.sh` une fois sur le VPS, puis vérifier `restore_test.sh`.
+3. Gate 2 : 20 relevés bancaires réels à 95 %, CGU/licence, assurance RC, tarification, bêta avec un CPA.
+4. `gitleaks` sur tout l'historique du dépôt source ; chiffrement optionnel des clés OpenRouter par utilisateur.
+5. Connecteurs ERP/CRM/QuickBooks : à personnaliser par client (volontairement hors socle).
+
+---
+
 Version 5.8 — 31 mai 2026
 Score : 8.8/10 · C1-C17 ✅ · Landing ✅ CI #105 · tiret-insécable/FAQ/C-27 corrigés
 

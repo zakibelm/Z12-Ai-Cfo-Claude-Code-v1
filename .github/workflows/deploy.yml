@@ -66,6 +66,11 @@ jobs:
           if npx tsc --noEmit -p . 2>&1 | grep -E "error TS(2304|2552)"; then
             echo "Nom non défini détecté"; exit 1
           fi
+      - name: Erreurs de syntaxe TypeScript
+        run: |
+          if npx tsc --noEmit -p . 2>&1 | grep -E "error TS1[0-9]{3}:"; then
+            echo "Erreur de syntaxe détectée"; exit 1
+          fi
       - name: Build
         run: npm run build
       - uses: actions/upload-artifact@v4

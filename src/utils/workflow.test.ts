@@ -78,3 +78,43 @@ describe('workflow — genTitle', () => {
     expect(title).not.toContain('...');
   });
 });
+
+import { sanitizePlan, MAX_PLAN_AGENTS } from './workflow';
+import deleg from '../../backend/tests/benchmarks/delegation_dataset.json';
+
+describe('sanitizePlan', () => {
+  it('retire les agents inconnus, les doublons et borne à 4', () => {
+    const p = sanitizePlan({ type: 'parallel', agents: ['TaxAgent', 'Bidon', 'TaxAgent', 'AuditAgent', 'CashFlowAgent', 'ComplianceAgent', 'FinancialAgent'] }, 'x');
+    expect(p.agents).toEqual(['TaxAgent', 'AuditAgent', 'CashFlowAgent', 'ComplianceAgent']);
+    expect(p.agents.length).toBeLessThanOrEqual(MAX_PLAN_AGENTS);
+  });
+  it('filtre aussi les phases hybrides', () => {
+    const p = sanitizePlan({ type: 'hybrid', agents: ['TaxAgent', 'AuditAgent'],
+      phases: [{ type: 'parallel', agents: ['TaxAgent', 'Fantome'] }, { type: 'sequential', agents: ['Fantome'] }] }, 'x');
+    expect(p.phases).toHaveLength(1);
+    expect(p.phases[0].agents).toEqual(['TaxAgent']);
+  });
+  it('normalise le type selon le nombre d\'agents', () => {
+    expect(sanitizePlan({ type: 'parallel', agents: ['TaxAgent'] }, '').type).toBe('single');
+    expect(sanitizePlan({ type: 'single', agents: ['TaxAgent', 'AuditAgent'] }, '').type).toBe('parallel');
+  });
+  it('repli signalé quand le plan est inutilisable', () => {
+    const p = sanitizePlan({ agents: ['Bidon'] }, 'Comment payer moins de TPS ?');
+    expect(p.fallback).toBe(true);
+    expect(p.agents).toEqual(['TaxAgent']);
+    expect(sanitizePlan(null, 'zzz').agents).toEqual(['FinancialAgent']);
+  });
+});
+
+describe('benchmark de délégation (fastRoute côté client)', () => {
+  const server2client: Record<string, string> = { sophie: 'TaxAgent', alexandre: 'AuditAgent', natalie: 'CashFlowAgent',
+    isabelle: 'ComplianceAgent', marc: 'FinancialAgent', sarah: 'InvestmentAgent', jeanfrancois: 'OCRAgent',
+    emilie: 'VeilleAgent', patrick: 'SubventionsAgent' };
+  it('route correctement au moins 85 % des questions à agent unique', async () => {
+    const { fastRoute } = await import('./workflow');
+    const single = (deleg as any[]).filter(c => c.expect.length === 1);
+    const ok = single.filter(c => fastRoute(c.q) === server2client[c.expect[0]]).length;
+    console.log(`[benchmark délégation client] ${ok}/${single.length}`, single.filter(c => fastRoute(c.q) !== server2client[c.expect[0]]).map(c => c.q + ' -> ' + fastRoute(c.q)));
+    expect(ok / single.length).toBeGreaterThanOrEqual(0.85);
+  });
+});

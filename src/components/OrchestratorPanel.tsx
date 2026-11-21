@@ -2,14 +2,15 @@ import React from 'react';
 import { useOrchestrator } from '../hooks/useOrchestrator';
 
 const AGENTS: Record<string, { emoji: string; label: string; color: string }> = {
-  sophie:    { emoji: '💼', label: 'Fiscalité',     color: '#8B5CF6' },
-  alexandre: { emoji: '🔍', label: 'Audit',         color: '#F59E0B' },
-  natalie:   { emoji: '💰', label: 'Trésorerie',    color: '#10B981' },
-  sarah:     { emoji: '📊', label: 'Valorisation',  color: '#3B82F6' },
-  marc:      { emoji: '🌱', label: 'ESG',            color: '#34D399' },
-  isabelle:  { emoji: '⚖️', label: 'Loi 25',        color: '#6366F1' },
-  thomas:    { emoji: '🎯', label: 'Stratégie',     color: '#EF4444' },
-  elena:     { emoji: '🌍', label: 'International', color: '#F97316' },
+  sophie:       { emoji: '💼', label: 'Fiscal',              color: '#8B5CF6' },
+  alexandre:    { emoji: '🔍', label: 'Audit',               color: '#F59E0B' },
+  natalie:      { emoji: '💰', label: 'Trésorerie',          color: '#10B981' },
+  isabelle:     { emoji: '⚖️', label: 'Conformité',          color: '#6366F1' },
+  marc:         { emoji: '📈', label: 'Analyse financière',  color: '#3B82F6' },
+  sarah:        { emoji: '📊', label: 'Investissement',      color: '#06B6D4' },
+  jeanfrancois: { emoji: '🧾', label: 'Extraction docs',     color: '#EC4899' },
+  emilie:       { emoji: '📰', label: 'Veille',              color: '#EF4444' },
+  patrick:      { emoji: '🏛️', label: 'Subventions',         color: '#F97316' },
 };
 
 const COMPLEXITY_LABELS: Record<string, string> = {
@@ -26,7 +27,7 @@ interface Props {
 }
 
 export const OrchestratorPanel: React.FC<Props> = ({ question, context = {}, onComplete, onClose }) => {
-  const { isRunning, complexity, activeAgents, completedAgents, agentResults, synthesis, error, orchestrate, reset } = useOrchestrator();
+  const { isRunning, complexity, activeAgents, completedAgents, agentResults, synthesis, warning, error, orchestrate, reset } = useOrchestrator();
 
   const handleStart = async () => {
     await orchestrate(question, context);
@@ -88,6 +89,12 @@ export const OrchestratorPanel: React.FC<Props> = ({ question, context = {}, onC
               </div>
             );
           })}
+        </div>
+      )}
+
+      {warning && (
+        <div role="status" style={{ marginBottom: '10px', padding: '8px 12px', fontSize: '12px', borderRadius: '8px', background: 'rgba(245,158,11,0.12)', border: '1px solid rgba(245,158,11,0.4)' }}>
+          ⚠️ {warning}
         </div>
       )}
 

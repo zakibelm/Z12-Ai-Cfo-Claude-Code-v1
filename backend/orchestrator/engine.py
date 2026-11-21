@@ -1,31 +1,21 @@
 import asyncio
 import json
 from typing import Dict, Any, AsyncGenerator
-from .assessor import assess_question, Complexity
+import os
+from .assessor import assess_question, Complexity, ORCHESTRATOR_MODEL
+from . import team
 
 
 import budget
 
 OPENROUTER_URL = "https://openrouter.ai/api/v1/chat/completions"
-AGENT_MODEL = "deepseek/deepseek-v4-pro"
-
-AGENT_PROMPTS = {
-    "sophie":    "Tu es Sophie, CPA fiscaliste quebecoise (T1/T2, TPS/TVQ, RS&DE, CRA). Reponds en 300 tokens max, bullet points, faits cles.",
-    "alexandre": "Tu es Alexandre, CPA audit et controle interne. Reponds en 300 tokens max, bullet points, risques prioritaires.",
-    "natalie":   "Tu es Natalie, specialiste tresorerie et cashflow. Reponds en 300 tokens max, bullet points, chiffres concrets.",
-    "sarah":     "Tu es Sarah, experte valorisation DCF et M&A. Reponds en 300 tokens max, bullet points, hypotheses cles.",
-    "marc":      "Tu es Marc, expert ESG et developpement durable. Reponds en 300 tokens max, bullet points, impacts materiels.",
-    "isabelle":  "Tu es Isabelle, experte conformite Loi 25 et donnees personnelles. Reponds en 300 tokens max, bullet points, obligations legales.",
-    "thomas":    "Tu es Thomas, stratege en croissance et positionnement. Reponds en 300 tokens max, bullet points, recommandations concretes.",
-    "elena":     "Tu es Elena, experte operations internationales et forex. Reponds en 300 tokens max, bullet points, risques et opportunites.",
-}
-
+AGENT_MODEL = ORCHESTRATOR_MODEL
 
 async def call_agent(agent: str, question: str, context: Dict) -> str:
     import httpx
     import os
     api_key = context.get("api_key") or os.getenv("OPENROUTER_API_KEY", "")
-    system = AGENT_PROMPTS.get(agent, "Tu es un expert financier.")
+    system = team.system_prompt(agent) + "\nReste synthétique (max ~300 mots)."
     extra = ""
     for key, val in context.items():
         if key.endswith("_result") and val:
@@ -56,7 +46,7 @@ async def synthesize(question: str, results: Dict[str, str]) -> str:
     import httpx
     import os
     api_key = os.getenv("OPENROUTER_API_KEY", "")
-    agents_block = "\n\n".join([f"### {a.capitalize()}\n{c}" for a, c in results.items()])
+    agents_block = "\n\n".join([f"### {team.TEAM[a].label if a in team.TEAM else a}\n{c}" for a, c in results.items()])
     prompt = f"""Tu es l orchestrateur du cabinet Z12 AI CFO Suite.
 Question : {question}
 Analyses recues :
@@ -78,9 +68,11 @@ Synthetise en rapport unifie : 1. Conclusions cles (3-5 pts) 2. Convergences exp
 
 
 async def execute_orchestration(question: str, context: Dict[str, Any]) -> AsyncGenerator[str, None]:
-    assessment = await assess_question(question)
+    assessment = await assess_question(question, context.get("user_id"))
     if context.get("rag_sources") or context.get("rag_withheld"):
         yield f"data: {json.dumps({'type': 'sources', 'sources': context.get('rag_sources', []), 'withheld': context.get('rag_withheld', 0)})}\n\n"
+    if assessment.fallback:
+        yield f"data: {json.dumps({'type': 'warning', 'message': assessment.warning})}\n\n"
     yield f"data: {json.dumps({'type': 'assessment', 'complexity': assessment.complexity.value, 'agents': assessment.agents, 'reasoning': assessment.reasoning})}\n\n"
     results: Dict[str, str] = {}
     if assessment.complexity.value == "simple":

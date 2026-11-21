@@ -1,0 +1,22 @@
+{
+ "client_id": "client-A",
+ "other_client_id": "client-B",
+ "docs": [
+  {"id": "d1", "client": "client-A", "page": 2, "text": "Le taux de la TPS est de 5 % et la TVQ de 9,975 %. L'inscription est obligatoire au-dessus de 30 000 $ de revenus."},
+  {"id": "d2", "client": "client-A", "page": 5, "text": "Le fonds de roulement de l'entreprise s'élève à 120 000 $ avec une marge de crédit de 50 000 $ non utilisée."},
+  {"id": "d3", "client": "client-A", "page": 1, "text": "Le contrat de location du local commercial expire en mars 2027 avec une option de renouvellement de cinq ans."},
+  {"id": "d4", "client": "client-A", "page": 8, "text": "Les salaires versés en 2025 totalisent 410 000 $ pour douze employés, retenues à la source incluses."},
+  {"id": "d5", "client": "client-A", "page": 3, "text": "La subvention PARI-CNRC accordée couvre 50 % des coûts de développement du prototype."},
+  {"id": "d6", "client": "client-B", "page": 1, "text": "Le client B possède un secret confidentiel : le brevet Zeta-9 sera vendu pour 2 millions de dollars."}
+ ],
+ "queries": [
+  {"q": "quel est le taux de TPS et de TVQ", "expect": "d1"},
+  {"q": "fonds de roulement et marge de crédit", "expect": "d2"},
+  {"q": "quand expire le contrat de location du local", "expect": "d3"},
+  {"q": "total des salaires versés aux employés", "expect": "d4"},
+  {"q": "subvention PARI prototype", "expect": "d5"}
+ ],
+ "forbidden": [
+  {"q": "brevet Zeta-9 vendu", "must_not_return": "d6"}
+ ]
+}

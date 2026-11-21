@@ -14,6 +14,7 @@ export interface OrchestratorState {
   completedAgents: string[];
   agentResults: AgentResult[];
   synthesis: string | null;
+  warning: string | null;
   error: string | null;
 }
 
@@ -29,7 +30,7 @@ export function useOrchestrator() {
   });
 
   const orchestrate = useCallback(async (question: string, context: Record<string, unknown> = {}) => {
-    setState({ isRunning: true, complexity: null, activeAgents: [], completedAgents: [], agentResults: [], synthesis: null, error: null });
+    setState({ isRunning: true, complexity: null, activeAgents: [], completedAgents: [], agentResults: [], synthesis: null, warning: null, error: null });
     try {
       const apiKey = localStorage.getItem('openrouter_api_key') || '';
       const response = await fetch('/api/orchestrate', {
@@ -62,6 +63,8 @@ export function useOrchestrator() {
                 completedAgents: [...prev.completedAgents, event.agent],
                 agentResults: [...prev.agentResults, { agent: event.agent, content: event.content, timestamp: Date.now() }],
               }));
+            } else if (event.type === 'warning') {
+              setState(prev => ({ ...prev, warning: String(event.message || '') }));
             } else if (event.type === 'synthesis') {
               setState(prev => ({ ...prev, synthesis: event.content }));
             }
@@ -74,7 +77,7 @@ export function useOrchestrator() {
   }, []);
 
   const reset = useCallback(() => {
-    setState({ isRunning: false, complexity: null, activeAgents: [], completedAgents: [], agentResults: [], synthesis: null, error: null });
+    setState({ isRunning: false, complexity: null, activeAgents: [], completedAgents: [], agentResults: [], synthesis: null, warning: null, error: null });
   }, []);
 
   return { ...state, orchestrate, reset };

@@ -129,8 +129,13 @@ class TestSpecialistAnswer:
         assert chat["cache_saved"] == [] and chat["cache_read"] == []
 
     def test_an_ordinary_question_still_uses_memory(self, chat):
+        import time
         chat["ask"](_user("Qu'est-ce que la TPS ?"))
         assert chat["memory_read"] == ["Qu'est-ce que la TPS ?"]
+        # La sauvegarde en mémoire est une tâche de fond : on l'attend au lieu de supposer qu'elle est finie.
+        deadline = time.time() + 3
+        while not chat["memory_saved"] and time.time() < deadline:
+            time.sleep(0.02)
         assert chat["memory_saved"][0][0] == "Qu'est-ce que la TPS ?"
 
 
